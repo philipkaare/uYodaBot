@@ -18,3 +18,4 @@ packages/
 # Runtime artifacts
 yodabot.model
 .superpowers/
+/docs/superpowers
