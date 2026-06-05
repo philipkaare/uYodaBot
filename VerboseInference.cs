@@ -95,7 +95,10 @@ public static class VerboseInference
         }
 
         Console.WriteLine(new string('─', 56));
-        int[] predicted = model.Predict(tokens);
+        int[] predicted = logits.Select(row => row
+            .Select((v, i) => (v, i))
+            .OrderByDescending(x => x.v)
+            .First().i).ToArray();
         Console.ForegroundColor = ConsoleColor.Green;
         Console.Write("Yoda: ");
         Console.ResetColor();
@@ -124,13 +127,15 @@ public static class VerboseInference
                                .Take(topN)
                                .ToArray();
         float maxLogit = logits[ranked[0]];
+        float minLogit = logits[ranked[^1]];
+        float span     = maxLogit - minLogit;
 
         foreach (int idx in ranked)
         {
             string word = vocab.WordAt(idx).PadRight(10);
-            int    w    = maxLogit > 0f
-                          ? Math.Clamp((int)(logits[idx] / maxLogit * 20), 0, 20)
-                          : 0;
+            int    w    = span > 1e-6f
+                          ? Math.Clamp((int)((logits[idx] - minLogit) / span * 20), 0, 20)
+                          : (idx == ranked[0] ? 20 : 0);
             string bar      = new string('█', w) + new string('░', 20 - w);
             string selected = idx == ranked[0] ? "  ✓" : "";
             if (idx == ranked[0]) Console.ForegroundColor = ConsoleColor.Green;
