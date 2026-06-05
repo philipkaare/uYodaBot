@@ -2,13 +2,14 @@ namespace YodaTransformer;
 
 public class Vocabulary
 {
-    public int Size => 13;
+    public int Size => 3 + _words.Length;
     public const int PAD = 0;
     public const int BOS = 1;
     public const int EOS = 2;
 
     private Dictionary<string, int> wordToIndex;
     private Dictionary<int, string> indexToWord;
+    private readonly string[] _words = { "i", "am", "to", "you", "the", "dark", "side", "hungry", "strong", "are", "will", "join" };
 
     public Vocabulary()
     {
@@ -24,14 +25,13 @@ public class Vocabulary
         indexToWord[BOS] = "<bos>";
         indexToWord[EOS] = "<eos>";
 
-        // Content words (indices 3-12)
-        string[] words = { "i", "am", "went", "to", "school", "you", "the", "dark", "side", "hungry" };
-        for (int i = 0; i < words.Length; i++)
+        // Content words (indices 3-14)
+        for (int i = 0; i < _words.Length; i++)
         {
             int idx = 3 + i;
-            wordToIndex[words[i]] = idx;
+            wordToIndex[_words[i]] = idx;
             // Special case: index 3 ("i") should decode to uppercase "I"
-            indexToWord[idx] = (idx == 3) ? "I" : words[i];
+            indexToWord[idx] = (idx == 3) ? "I" : _words[i];
         }
     }
 

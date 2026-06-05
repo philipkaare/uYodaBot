@@ -2,7 +2,6 @@ namespace YodaTransformer;
 
 public class AttentionHead
 {
-    private int _dModel;
     private int _dHead;
 
     public float[][] Wq;
@@ -20,7 +19,6 @@ public class AttentionHead
 
     public AttentionHead(int dModel, int dHead, Random rng)
     {
-        _dModel = dModel;
         _dHead = dHead;
         Wq = MathOps.RandomMatrix(dModel, dHead, rng, scale: 0.02f);
         Wk = MathOps.RandomMatrix(dModel, dHead, rng, scale: 0.02f);
