@@ -14,3 +14,7 @@ obj/
 *.snupkg
 project.lock.json
 packages/
+
+# Runtime artifacts
+yodabot.model
+.superpowers/
