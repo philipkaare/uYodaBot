@@ -54,7 +54,8 @@ public static class VerboseTrainer
         }
         finally
         {
-            Console.SetCursorPosition(0, panelBottom);
+            int safeRow = Math.Min(panelBottom, Console.BufferHeight - 1);
+            Console.SetCursorPosition(0, safeRow);
             Console.CursorVisible = true;
         }
 
@@ -114,6 +115,7 @@ public static class VerboseTrainer
             Console.ResetColor();
         }
 
+        Console.ResetColor();
         Overwrite("");
         Console.ForegroundColor = ConsoleColor.DarkGray;
         Overwrite("Press Q to skip remaining epochs");
