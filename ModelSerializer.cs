@@ -52,6 +52,11 @@ public static class ModelSerializer
 
             return true;
         }
+        catch (Exception ex) when (ex is not FileNotFoundException)
+        {
+            Console.Error.WriteLine($"[ModelSerializer] Could not load {path}: {ex.Message}");
+            return false;
+        }
         catch { return false; }
     }
 

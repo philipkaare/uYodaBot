@@ -12,8 +12,7 @@ var rng   = new Random(42);
 var vocab = new YodaTransformer.Vocabulary();
 var pairs = YodaTransformer.TrainingData.GetPairs(vocab);
 
-YodaTransformer.TransformerModel model   = NewModel();
-YodaTransformer.Trainer          trainer = new(model, LearningRate);
+YodaTransformer.TransformerModel model = NewModel();
 
 bool modelLoaded = YodaTransformer.ModelSerializer.TryLoad(model, out int savedEpochs, ModelPath);
 if (!modelLoaded) savedEpochs = 0;
@@ -28,7 +27,7 @@ while (true)
             // Always retrain from scratch with a fresh model.
             rng     = new Random(42);
             model   = NewModel();
-            trainer = new YodaTransformer.Trainer(model, LearningRate);
+            var trainer = new YodaTransformer.Trainer(model, LearningRate);
 
             YodaTransformer.VerboseTrainer.Run(trainer, pairs, vocab, Epochs);
             YodaTransformer.ModelSerializer.Save(model, Epochs, ModelPath);
