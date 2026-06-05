@@ -1,68 +1,100 @@
-// Yoda Transformer — top-level entry point
+// uYodaBot — top-level entry point
 
-const int dModel     = 8;
-const int dHead      = 8;
-const int dFF        = 16;
-const int maxSeqLen  = 10;
-const int epochs     = 10000;
-const float learningRate = 0.005f;
+const string ModelPath    = "yodabot.model";
+const int    DModel       = 8;
+const int    DHead        = 8;
+const int    DFF          = 16;
+const int    MaxSeqLen    = 10;
+const int    Epochs       = 10000;
+const float  LearningRate = 0.005f;
 
-var rng     = new Random(42);
-var vocab   = new YodaTransformer.Vocabulary();
-var model   = new YodaTransformer.TransformerModel(vocab.Size, dModel, dHead, dFF, maxSeqLen, rng);
-var trainer = new YodaTransformer.Trainer(model, learningRate);
+var rng   = new Random(42);
+var vocab = new YodaTransformer.Vocabulary();
+var pairs = YodaTransformer.TrainingData.GetPairs(vocab);
 
-// Build training pairs — each (input, target) is encoded with BOS/EOS.
-var pairs = new (int[] input, int[] target)[]
+YodaTransformer.TransformerModel model   = NewModel();
+YodaTransformer.Trainer          trainer = new(model, LearningRate);
+
+bool modelLoaded = YodaTransformer.ModelSerializer.TryLoad(model, out int savedEpochs, ModelPath);
+if (!modelLoaded) savedEpochs = 0;
+
+while (true)
 {
-    (vocab.Encode("i am hungry"),               vocab.Encode("hungry i am")),
-    (vocab.Encode("i am you"),                  vocab.Encode("you i am")),
-    (vocab.Encode("you are hungry"),            vocab.Encode("hungry you are")),
-    (vocab.Encode("you will join the dark side"), vocab.Encode("join the dark side you will")),
-    (vocab.Encode("i am strong"),               vocab.Encode("strong i am")),
-    (vocab.Encode("you are strong"),            vocab.Encode("strong you are")),
-    (vocab.Encode("i will join the dark side"), vocab.Encode("join the dark side i will")),
-    (vocab.Encode("you will join"),             vocab.Encode("join you will")),
-    (vocab.Encode("i will join"),               vocab.Encode("join i will")),
-    (vocab.Encode("i am the dark side"),        vocab.Encode("the dark side i am")),
-    (vocab.Encode("you are the dark side"),     vocab.Encode("the dark side you are")),
+    var choice = new YodaTransformer.Menu(modelLoaded, savedEpochs).Run();
 
-    // additional pairs within existing vocabulary
-    (vocab.Encode("you are i"),                     vocab.Encode("i you are")),
-    (vocab.Encode("i am to the dark side"),         vocab.Encode("to the dark side i am")),
-    (vocab.Encode("you are to the dark side"),      vocab.Encode("to the dark side you are")),
-    (vocab.Encode("i am the side"),                 vocab.Encode("the side i am")),
-    (vocab.Encode("you are the side"),              vocab.Encode("the side you are")),
-    (vocab.Encode("i will join you"),               vocab.Encode("join you i will")),
-    (vocab.Encode("i will join the side"),          vocab.Encode("join the side i will")),
-    (vocab.Encode("you will join the side"),        vocab.Encode("join the side you will")),
-    (vocab.Encode("the dark side are strong"),      vocab.Encode("strong the dark side are")),
-    (vocab.Encode("the dark side are hungry"),      vocab.Encode("hungry the dark side are")),
-    (vocab.Encode("the dark side will join you"),   vocab.Encode("join you the dark side will")),
-    (vocab.Encode("the dark side will join i"),     vocab.Encode("join i the dark side will")),
-};
+    switch (choice)
+    {
+        case YodaTransformer.MenuOption.Train:
+            // Always retrain from scratch with a fresh model.
+            rng     = new Random(42);
+            model   = NewModel();
+            trainer = new YodaTransformer.Trainer(model, LearningRate);
 
-// Training loop
-float loss = 0f;
-for (int epoch = 0; epoch < epochs; epoch++)
-{
-    (loss, _) = trainer.TrainStep(pairs);
-    if (epoch % 200 == 0)
-        Console.WriteLine($"Epoch {epoch,4}: loss = {loss:F4}");
+            YodaTransformer.VerboseTrainer.Run(trainer, pairs, vocab, Epochs);
+            YodaTransformer.ModelSerializer.Save(model, Epochs, ModelPath);
+            modelLoaded  = true;
+            savedEpochs  = Epochs;
+            Console.WriteLine("Model saved. Press any key to return to menu...");
+            Console.ReadKey(intercept: true);
+            break;
+
+        case YodaTransformer.MenuOption.Chat:
+            RunChat(model, vocab, verbose: false);
+            break;
+
+        case YodaTransformer.MenuOption.ChatVerbose:
+            RunChat(model, vocab, verbose: true);
+            break;
+
+        case YodaTransformer.MenuOption.Exit:
+            return;
+    }
 }
-Console.WriteLine($"Epoch {epochs,4}: loss = {loss:F4}");
 
-// Inference
-string[] tests = { "i am hungry", "you are strong", "you will join the dark side" };
-Console.WriteLine("\n--- Yoda Transformer Inference ---");
-foreach (var sentence in tests)
+YodaTransformer.TransformerModel NewModel() =>
+    new(vocab.Size, DModel, DHead, DFF, MaxSeqLen, rng);
+
+static void RunChat(
+    YodaTransformer.TransformerModel model,
+    YodaTransformer.Vocabulary       vocab,
+    bool verbose)
 {
-    int[] tokens    = vocab.Encode(sentence);
-    int[] predicted = model.Predict(tokens);
-    Console.WriteLine($"  Input:  {sentence}");
-    Console.WriteLine($"  Output: {vocab.Decode(predicted)}");
+    string[] knownWords =
+        { "i", "am", "to", "you", "the", "dark", "side", "hungry", "strong", "are", "will", "join" };
+
+    Console.Clear();
+    Console.WriteLine(verbose
+        ? "--- Yoda Chat (verbose) — type a sentence, or 'quit' to exit ---"
+        : "--- Yoda Chat — type a sentence, or 'quit' to exit ---");
+    Console.WriteLine($"  Known words: {string.Join(", ", knownWords)}");
     Console.WriteLine();
-}
 
-// Attention note
-Console.WriteLine("(Attention weights are stored in model.Block.Attention — inspect in debugger)");
+    while (true)
+    {
+        Console.Write("You: ");
+        string? input = Console.ReadLine();
+        if (input is null || input.Trim().ToLower() is "quit" or "exit" or "q")
+            break;
+        if (string.IsNullOrWhiteSpace(input)) continue;
+
+        if (verbose)
+        {
+            YodaTransformer.VerboseInference.Run(model, vocab, input.Trim());
+        }
+        else
+        {
+            try
+            {
+                int[] tokens    = vocab.Encode(input.Trim());
+                int[] predicted = model.Predict(tokens);
+                Console.WriteLine($"Yoda: {vocab.Decode(predicted)}");
+                Console.WriteLine();
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"  (unknown word — {ex.Message})");
+                Console.WriteLine();
+            }
+        }
+    }
+}
