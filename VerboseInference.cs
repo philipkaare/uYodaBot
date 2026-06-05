@@ -52,22 +52,22 @@ public static class VerboseInference
         Dim("  at a different frequency. Position 0 always adds the same offset.");
         Console.WriteLine();
 
-        int show = Math.Min(6, dModel);
+        int show = Math.Min(5, dModel);
         for (int p = 0; p < tokens.Length; p++)
         {
             float[] tokEmb = model.Embedding.TokenWeights[tokens[p]];
             float[] posEnc = model.Embedding.GetPosEncoding(p);
 
-            string embStr = string.Join(" ", tokEmb.Take(show).Select(v => $"{v,6:F3}"));
-            string posStr = string.Join(" ", posEnc.Take(show).Select(v => $"{v,6:F3}"));
-            string totStr = string.Join(" ", embOut[p].Take(show).Select(v => $"{v,6:F3}"));
+            string embStr = string.Join(" ", tokEmb.Take(show).Select(v => $"{v,7:F3}"));
+            string posStr = string.Join(" ", posEnc.Take(show).Select(v => $"{v,7:F3}"));
+            string totStr = string.Join(" ", embOut[p].Take(show).Select(v => $"{v,7:F3}"));
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine($"  pos {p} ({vocab.WordAt(tokens[p])})");
             Console.ResetColor();
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"    embed [ {embStr} ... ]  ← learned word features");
-            Console.WriteLine($"    + pos [ {posStr} ... ]  ← fixed position signal");
+            Console.WriteLine($"    embed [ {embStr} ... ]  (word features)");
+            Console.WriteLine($"    + pos [ {posStr} ... ]  (position signal)");
             Console.ResetColor();
             Console.WriteLine($"    total [ {totStr} ... ]");
         }
@@ -106,7 +106,7 @@ public static class VerboseInference
 
         Section($"④ Feed-Forward Network  ({dFF} hidden neurons, ReLU)");
         Dim("  After attention, each position independently passes through a tiny");
-        Dim("  2-layer perceptron: x → W1 → ReLU → W2 → output.");
+        Dim("  2-layer perceptron: x -> W1 -> ReLU -> W2 -> output.");
         Dim($"  W1 projects from {dModel} dims up to {dFF} dims (the hidden layer).");
         Dim("  ReLU zeroes any negative pre-activations, leaving only positive signals.");
         Dim($"  W2 projects back down to {dModel} dims and the result is added to the");
@@ -128,15 +128,15 @@ public static class VerboseInference
             Console.ResetColor();
             Console.WriteLine($"  {active}/{dFF} neurons active");
 
-            string outStr = string.Join(" ", ffnOut[p].Take(show).Select(v => $"{v,6:F3}"));
+            string outStr = string.Join(" ", ffnOut[p].Take(show).Select(v => $"{v,7:F3}"));
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"  {"ffn output:",-18}[ {outStr} ... ]  ← added to residual");
+            Console.WriteLine($"  {"ffn output:",-18}[ {outStr} ... ]");
             Console.ResetColor();
         }
         Console.WriteLine();
 
         // ─── ⑤ Output logits → predictions ────────────────────
-        Section("⑤ Output logits → predictions");
+        Section("⑤ Output logits  (predictions)");
         Dim("  The transformer's output vectors are projected to vocabulary size");
         Dim("  via Wout. The highest logit at each position becomes the output token.");
 
