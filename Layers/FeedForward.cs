@@ -12,6 +12,7 @@ public class FeedForward
     private float[][] _x;      // input [seqLen × dModel]
     private float[][] _h;      // pre-ReLU hidden [seqLen × dFF]
     private float[][] _hRelu;  // post-ReLU hidden [seqLen × dFF]
+    public  float[][] HRelu => _hRelu;
 
     public FeedForward(int dModel, int dFF, Random rng)
     {

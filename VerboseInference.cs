@@ -25,12 +25,10 @@ public static class VerboseInference
         Dim("  Each word is mapped to an integer ID from the vocabulary.");
         Dim("  Special tokens <bos> (start) and <eos> (end) are added automatically.");
 
-        // Words row
         Console.Write("  ");
         foreach (int t in tokens)
             Console.Write($"[ {vocab.WordAt(t),-7}]  ");
         Console.WriteLine();
-        // IDs row
         Console.Write("  ");
         foreach (int t in tokens)
             Console.Write($"  {t,-9} ");
@@ -42,16 +40,36 @@ public static class VerboseInference
         float[][] embOut = model.Embedding.LastOutput;
 
         // ─── ② Embed + Positional Encoding ────────────────────
-        Section($"② Embed + Positional Encoding  ({embOut[0].Length}-dim)");
-        Dim("  Each token ID is looked up in a learned embedding table.");
-        Dim("  A fixed sinusoidal positional encoding is added so the model");
-        Dim("  knows the order of tokens.");
+        int dModel = embOut[0].Length;
+        Section($"② Embed + Positional Encoding  ({dModel}-dim)");
+        Dim("  Token embedding: each word ID maps to a row in a learned weight matrix.");
+        Dim("  The values have no fixed human meaning — the model assigns whatever");
+        Dim("  numbers minimise loss during training. Similar words end up with");
+        Dim("  similar vectors. The embedding for the same word is always identical.");
+        Dim("");
+        Dim("  Positional encoding: a fixed sin/cos pattern added to each vector so");
+        Dim("  the model knows word order. Even dims use sin, odd dims use cos, each");
+        Dim("  at a different frequency. Position 0 always adds the same offset.");
+        Console.WriteLine();
 
+        int show = Math.Min(6, dModel);
         for (int p = 0; p < tokens.Length; p++)
         {
-            string label = $"pos {p} {vocab.WordAt(tokens[p])}:".PadRight(16);
-            string vals  = string.Join(" ", embOut[p].Take(8).Select(v => $"{v,7:F3}"));
-            Console.WriteLine($"  {label} [ {vals} ... ]");
+            float[] tokEmb = model.Embedding.TokenWeights[tokens[p]];
+            float[] posEnc = model.Embedding.GetPosEncoding(p);
+
+            string embStr = string.Join(" ", tokEmb.Take(show).Select(v => $"{v,6:F3}"));
+            string posStr = string.Join(" ", posEnc.Take(show).Select(v => $"{v,6:F3}"));
+            string totStr = string.Join(" ", embOut[p].Take(show).Select(v => $"{v,6:F3}"));
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"  pos {p} ({vocab.WordAt(tokens[p])})");
+            Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"    embed [ {embStr} ... ]  ← learned word features");
+            Console.WriteLine($"    + pos [ {posStr} ... ]  ← fixed position signal");
+            Console.ResetColor();
+            Console.WriteLine($"    total [ {totStr} ... ]");
         }
         Console.WriteLine();
 
@@ -62,12 +80,10 @@ public static class VerboseInference
         Dim("  The weight matrix shows how much each position (row) attends");
         Dim("  to each other position (col) after softmax normalisation.");
 
-        // Column header
         Console.Write("            ");
         foreach (int t in tokens)
             Console.Write($"{vocab.WordAt(t),8}");
         Console.WriteLine();
-        // Rows
         for (int r = 0; r < tokens.Length; r++)
         {
             Console.Write($"  {vocab.WordAt(tokens[r]),-10}");
@@ -83,8 +99,44 @@ public static class VerboseInference
         }
         Console.WriteLine();
 
-        // ─── ④ Output logits → predictions ────────────────────
-        Section("④ Output logits → predictions");
+        // ─── ④ Feed-Forward Network ───────────────────────────
+        float[][] ffnOut = model.Block.FfnOut;
+        float[][] hRelu  = model.Block.Ffn.HRelu;
+        int       dFF    = hRelu[0].Length;
+
+        Section($"④ Feed-Forward Network  ({dFF} hidden neurons, ReLU)");
+        Dim("  After attention, each position independently passes through a tiny");
+        Dim("  2-layer perceptron: x → W1 → ReLU → W2 → output.");
+        Dim($"  W1 projects from {dModel} dims up to {dFF} dims (the hidden layer).");
+        Dim("  ReLU zeroes any negative pre-activations, leaving only positive signals.");
+        Dim($"  W2 projects back down to {dModel} dims and the result is added to the");
+        Dim("  residual stream (skip connection — the original vector is preserved).");
+        Dim("  This is where the model stores factual and structural patterns.");
+        Console.WriteLine();
+
+        for (int p = 0; p < tokens.Length; p++)
+        {
+            int    active = hRelu[p].Count(v => v > 0f);
+            string fires  = new string(hRelu[p].Select(v => v > 0f ? '█' : '░').ToArray());
+            string posLabel = $"pos {p} ({vocab.WordAt(tokens[p])})".PadRight(14);
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write($"  {posLabel}  ");
+            Console.ResetColor();
+            Console.ForegroundColor = active > dFF / 2 ? ConsoleColor.Green : ConsoleColor.Yellow;
+            Console.Write(fires);
+            Console.ResetColor();
+            Console.WriteLine($"  {active}/{dFF} neurons active");
+
+            string outStr = string.Join(" ", ffnOut[p].Take(show).Select(v => $"{v,6:F3}"));
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"  {"ffn output:",-18}[ {outStr} ... ]  ← added to residual");
+            Console.ResetColor();
+        }
+        Console.WriteLine();
+
+        // ─── ⑤ Output logits → predictions ────────────────────
+        Section("⑤ Output logits → predictions");
         Dim("  The transformer's output vectors are projected to vocabulary size");
         Dim("  via Wout. The highest logit at each position becomes the output token.");
 

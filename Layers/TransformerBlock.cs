@@ -13,7 +13,8 @@ public class TransformerBlock
     private float[][] _ffnOut;
 
     public AttentionHead Attention => _attention;
-    public FeedForward Ffn => _ffn;
+    public FeedForward   Ffn       => _ffn;
+    public float[][]     FfnOut    => _ffnOut;
 
     public TransformerBlock(int dModel, int dHead, int dFF, Random rng)
     {

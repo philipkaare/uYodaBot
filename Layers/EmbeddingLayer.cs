@@ -6,7 +6,8 @@ public class EmbeddingLayer
     private float[][] _posEncoding;
     private int _dModel;
     private float[][] _lastOutput = null!;
-    public  float[][] LastOutput  => _lastOutput;
+    public  float[][] LastOutput             => _lastOutput;
+    public  float[]   GetPosEncoding(int pos) => _posEncoding[pos];
 
     public EmbeddingLayer(int vocabSize, int dModel, int maxSeqLen, Random rng)
     {
