@@ -75,6 +75,9 @@ public static class ModelSerializer
     {
         int rows = r.ReadInt32();
         int cols = r.ReadInt32();
+        if (rows != m.Length || cols != m[0].Length)
+            throw new InvalidOperationException(
+                $"Dimension mismatch: file [{rows}×{cols}] vs model [{m.Length}×{m[0].Length}]");
         for (int i = 0; i < rows; i++)
             for (int j = 0; j < cols; j++)
                 m[i][j] = r.ReadSingle();
@@ -84,6 +87,9 @@ public static class ModelSerializer
     {
         r.ReadInt32(); // rows = 1, skip
         int cols = r.ReadInt32();
+        if (cols != v.Length)
+            throw new InvalidOperationException(
+                $"Vector length mismatch: file [{cols}] vs model [{v.Length}]");
         for (int j = 0; j < cols; j++)
             v[j] = r.ReadSingle();
     }
