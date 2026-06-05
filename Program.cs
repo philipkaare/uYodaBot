@@ -46,7 +46,7 @@ var pairs = new (int[] input, int[] target)[]
 float loss = 0f;
 for (int epoch = 0; epoch < epochs; epoch++)
 {
-    loss = trainer.TrainStep(pairs);
+    (loss, _) = trainer.TrainStep(pairs);
     if (epoch % 200 == 0)
         Console.WriteLine($"Epoch {epoch,4}: loss = {loss:F4}");
 }

@@ -105,14 +105,17 @@ public class Trainer
             b[i] -= lr * db[i] * scale;
     }
 
-    // Run one training step over the provided pairs and return the average loss.
-    public float TrainStep((int[] input, int[] target)[] pairs)
+    // Run one training step over the provided pairs and return the average loss and per-pair losses.
+    public (float avgLoss, float[] perPairLosses) TrainStep((int[] input, int[] target)[] pairs)
     {
         float totalLoss = 0f;
+        float[] perPairLosses = new float[pairs.Length];
 
-        foreach (var pair in pairs)
+        for (int pairIdx = 0; pairIdx < pairs.Length; pairIdx++)
         {
-            // ── 1. Restore true embedding weights before Forward (clear any previous gradient residue).
+            var pair = pairs[pairIdx];
+
+            // ── 1. Restore true embedding weights before Forward.
             float[][] tw = _model.Embedding.TokenWeights;
             int vocabSize = tw.Length;
             int dModel = tw[0].Length;
@@ -123,13 +126,14 @@ public class Trainer
             float[][] logits = _model.Forward(pair.input);
 
             // ── 3. Compute loss.
-            totalLoss += CrossEntropyLoss(logits, pair.target);
+            float pairLoss = CrossEntropyLoss(logits, pair.target);
+            totalLoss += pairLoss;
+            perPairLosses[pairIdx] = pairLoss;
 
             // ── 4. Compute output gradient.
             float[][] dLogits = CrossEntropyGrad(logits, pair.target);
 
-            // Zero TokenWeights so Backward accumulates a clean gradient (it uses +=)
-            // ── 5. Zero out TokenWeights so Backward uses it purely as a gradient accumulator.
+            // ── 5. Zero out TokenWeights so Backward uses it as gradient accumulator.
             for (int i = 0; i < vocabSize; i++)
                 for (int j = 0; j < dModel; j++)
                     tw[i][j] = 0f;
@@ -138,7 +142,7 @@ public class Trainer
             var (dWout, dWq, dWk, dWv, dWo, dW1, db1, dW2, db2, dTokenWeights) =
                 _model.Backward(pair.input, dLogits);
 
-            // ── 7. Apply clipped SGD updates to all weight matrices.
+            // ── 7. Apply clipped SGD updates.
             ClipAndUpdate(_model.Wout, dWout, _lr, 1.0f);
             ClipAndUpdate(_model.Block.Attention.Wq, dWq, _lr, 1.0f);
             ClipAndUpdate(_model.Block.Attention.Wk, dWk, _lr, 1.0f);
@@ -149,21 +153,23 @@ public class Trainer
             ClipAndUpdate(_model.Block.Ffn.W2, dW2, _lr, 1.0f);
             ClipAndUpdateVec(_model.Block.Ffn.b2, db2, _lr, 1.0f);
 
-            // ── 8. Apply clipped SGD update to embedding weights via the copy.
-            //      dTokenWeights IS _model.Embedding.TokenWeights (the gradient accumulator).
+            // ── 8. Apply embedding gradient update via copy.
             float[] flatEmb = new float[vocabSize * dModel];
             int idx = 0;
             for (int i = 0; i < vocabSize; i++)
                 for (int j = 0; j < dModel; j++)
                     flatEmb[idx++] = dTokenWeights[i][j];
-
             float embScale = MathOps.ClipNorm(flatEmb, 1.0f);
-
             for (int i = 0; i < vocabSize; i++)
                 for (int j = 0; j < dModel; j++)
                     _embWeightsCopy[i][j] -= _lr * dTokenWeights[i][j] * embScale;
         }
 
-        return totalLoss / pairs.Length;
+        // ── 9. Restore trained embedding weights for inference.
+        float[][] finalTw = _model.Embedding.TokenWeights;
+        for (int i = 0; i < finalTw.Length; i++)
+            Array.Copy(_embWeightsCopy[i], finalTw[i], _embWeightsCopy[i].Length);
+
+        return (totalLoss / pairs.Length, perPairLosses);
     }
 }
