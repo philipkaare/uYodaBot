@@ -5,6 +5,8 @@ public class EmbeddingLayer
     public float[][] TokenWeights;
     private float[][] _posEncoding;
     private int _dModel;
+    private float[][] _lastOutput = null!;
+    public  float[][] LastOutput  => _lastOutput;
 
     public EmbeddingLayer(int vocabSize, int dModel, int maxSeqLen, Random rng)
     {
@@ -28,6 +30,7 @@ public class EmbeddingLayer
         float[][] output = new float[tokens.Length][];
         for (int p = 0; p < tokens.Length; p++)
             output[p] = MathOps.AddVectors(TokenWeights[tokens[p]], _posEncoding[p]);
+        _lastOutput = output;
         return output;
     }
 

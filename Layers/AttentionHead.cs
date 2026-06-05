@@ -17,6 +17,11 @@ public class AttentionHead
     private float[][] _weights;
     private float[][] _context;
 
+    public float[][] Weights => _weights;
+    public float[][] Q       => _q;
+    public float[][] K       => _k;
+    public float[][] V       => _v;
+
     public AttentionHead(int dModel, int dHead, Random rng)
     {
         _dHead = dHead;
