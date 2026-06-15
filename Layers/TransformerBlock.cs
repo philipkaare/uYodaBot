@@ -5,12 +5,12 @@ public class TransformerBlock
     private AttentionHead _attention;
     private FeedForward _ffn;
 
-    private float[][] _x;
-    private float[][] _xNorm1;
-    private float[][] _attnOut;
-    private float[][] _x1;
-    private float[][] _xNorm2;
-    private float[][] _ffnOut;
+    private float[][] _x = null!;
+    private float[][] _xNorm1 = null!;
+    private float[][] _attnOut = null!;
+    private float[][] _x1 = null!;
+    private float[][] _xNorm2 = null!;
+    private float[][] _ffnOut = null!;
 
     public AttentionHead Attention => _attention;
     public FeedForward   Ffn       => _ffn;

@@ -9,13 +9,13 @@ public class AttentionHead
     public float[][] Wv;
     public float[][] Wo;
 
-    private float[][] _x;
-    private float[][] _q;
-    private float[][] _k;
-    private float[][] _v;
-    private float[][] _scores;
-    private float[][] _weights;
-    private float[][] _context;
+    private float[][] _x = null!;
+    private float[][] _q = null!;
+    private float[][] _k = null!;
+    private float[][] _v = null!;
+    private float[][] _scores = null!;
+    private float[][] _weights = null!;
+    private float[][] _context = null!;
 
     public float[][] Weights => _weights;
     public float[][] Q       => _q;

@@ -5,8 +5,8 @@ public class TransformerModel
     private EmbeddingLayer _embedding;
     private TransformerBlock _block;
     public  float[][] Wout;
-    private float[][] _embOut;
-    private float[][] _blockOut;
+    private float[][] _embOut = null!;
+    private float[][] _blockOut = null!;
 
     public EmbeddingLayer Embedding => _embedding;
     public TransformerBlock Block => _block;
