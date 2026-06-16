@@ -4,7 +4,6 @@ const string ModelPath    = "yodabot.model";
 const int    DModel       = 8;
 const int    DHead        = 8;
 const int    DFF          = 16;
-const int    MaxSeqLen    = 10;
 const int    Epochs       = 10000;
 const float  LearningRate = 0.005f;
 
@@ -12,10 +11,24 @@ var rng   = new Random(42);
 var vocab = new YodaTransformer.Vocabulary();
 var pairs = YodaTransformer.TrainingData.GetPairs(vocab);
 
+// Size the positional encoding to the longest sequence in the training data
+// (inputs and targets), so it stays correct as the data grows.
+int MaxSeqLen = pairs.Max(p => Math.Max(p.input.Length, p.target.Length));
+
 YodaTransformer.TransformerModel model = NewModel();
 
 bool modelLoaded = YodaTransformer.ModelSerializer.TryLoad(model, out int savedEpochs, ModelPath);
-if (!modelLoaded) savedEpochs = 0;
+if (!modelLoaded)
+{
+    savedEpochs = 0;
+    // A model on disk that fails to load is incompatible (e.g. the vocabulary
+    // changed size). Delete it so we start over with a fresh model.
+    if (File.Exists(ModelPath))
+    {
+        File.Delete(ModelPath);
+        Console.Error.WriteLine($"[startup] Removed incompatible model file '{ModelPath}'. Train a new model from the menu.");
+    }
+}
 
 while (true)
 {
@@ -58,14 +71,11 @@ static void RunChat(
     YodaTransformer.Vocabulary       vocab,
     bool verbose)
 {
-    string[] knownWords =
-        { "i", "am", "to", "you", "the", "dark", "side", "hungry", "strong", "are", "will", "join" };
-
     Console.Clear();
     Console.WriteLine(verbose
         ? "--- Yoda Chat (verbose) — type a sentence, or 'quit' to exit ---"
         : "--- Yoda Chat — type a sentence, or 'quit' to exit ---");
-    Console.WriteLine($"  Known words: {string.Join(", ", knownWords)}");
+    Console.WriteLine($"  Known words: {string.Join(", ", vocab.Words)}");
     Console.WriteLine();
 
     while (true)

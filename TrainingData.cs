@@ -27,5 +27,13 @@ public static class TrainingData
         (vocab.Encode("the dark side are hungry"),      vocab.Encode("hungry the dark side are")),
         (vocab.Encode("the dark side will join you"),   vocab.Encode("join you the dark side will")),
         (vocab.Encode("the dark side will join i"),     vocab.Encode("join i the dark side will")),
+        (vocab.Encode("the light side are strong"),      vocab.Encode("strong the light side are")),
+        (vocab.Encode("the light side are hungry"),      vocab.Encode("hungry the light side are")),
+        (vocab.Encode("the light side will join you"),   vocab.Encode("join you the light side will")),
+        (vocab.Encode("the light side will join i"),     vocab.Encode("join i the light side will")),
+        (vocab.Encode("the light side of the force are strong"),      vocab.Encode("strong the light side of the force are")),
+        (vocab.Encode("the light side of the force are hungry"),      vocab.Encode("hungry the light side of the force are")),
+        (vocab.Encode("the light side of the force will join you"),   vocab.Encode("join you the light side of the force will")),
+        (vocab.Encode("the light side of the force will join i"),     vocab.Encode("join i the light side of the force will")),
     };
 }

@@ -7,9 +7,12 @@ public class Vocabulary
     public const int BOS = 1;
     public const int EOS = 2;
 
+    /// <summary>The content words known to the model — the single source of truth for the vocabulary.</summary>
+    public IReadOnlyList<string> Words => _words;
+
     private Dictionary<string, int> wordToIndex;
     private Dictionary<int, string> indexToWord;
-    private readonly string[] _words = { "i", "am", "to", "you", "the", "dark", "side", "hungry", "strong", "are", "will", "join" };
+    private readonly string[] _words = { "i", "am", "to", "you", "the", "dark", "side", "hungry", "strong", "are", "will", "join", "light", "force", "of" };
 
     public Vocabulary()
     {
