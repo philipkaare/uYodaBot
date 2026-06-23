@@ -16,6 +16,6 @@ project.lock.json
 packages/
 
 # Runtime artifacts
-yodabot.model
+/yodabot.model
 .superpowers/
 /docs/superpowers
