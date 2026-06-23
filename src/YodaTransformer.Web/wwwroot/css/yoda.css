@@ -28,3 +28,16 @@ button { cursor: pointer; border: 1px solid var(--grid); background: var(--panel
   color: var(--ink); padding: 8px 16px; border-radius: 8px; font-size: 14px; }
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: .5; cursor: default; }
+
+.vtable { border-collapse: collapse; width: 100%; }
+.vtable th, .vtable td { padding: 4px 8px; text-align: left; font-size: 13px; }
+.vtable thead th { color: var(--dim); border-bottom: 1px solid var(--grid); }
+.heat td { text-align: center; border: 1px solid var(--bg); color: #04210f; font-weight: 600; }
+.neurons { display: inline-flex; gap: 2px; margin: 0 8px; vertical-align: middle; }
+.cell { width: 10px; height: 14px; border-radius: 2px; display: inline-block; }
+.cell.on { background: var(--green); } .cell.off { background: var(--grid); }
+.logit-row { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+.logit-word { width: 80px; } .logit-val { width: 56px; text-align: right; }
+.logit-bar { flex: 1; height: 12px; background: var(--grid); border-radius: 6px; overflow: hidden; }
+.logit-fill { display: block; height: 100%; background: var(--dim); }
+.logit-fill.win { background: var(--green); }

@@ -1,0 +1,183 @@
+@page "/verbose"
+@inject YodaModel Yoda
+<PageTitle>uYodaBot — Verbose</PageTitle>
+
+<h2>Verbose inference</h2>
+<div class="panel">
+    <input type="text" placeholder="i am strong"
+           @bind="_input" @bind:event="oninput" @onkeydown="OnKeyDown" />
+    <div style="margin-top:12px;">
+        <button @onclick="Run" disabled="@string.IsNullOrWhiteSpace(_input)">Trace it</button>
+    </div>
+    @if (_error is not null) { <p class="mono red" style="margin-top:12px;">@_error</p> }
+</div>
+
+@if (_tokens is not null)
+{
+    var vocab = Yoda.Vocab;
+    var model = Yoda.Model;
+    int show = Math.Min(5, _emb![0].Length);
+
+    <div class="panel">
+        <h3>① Tokenise</h3>
+        <p class="dim">Each word maps to an integer id; &lt;bos&gt;/&lt;eos&gt; are added automatically.</p>
+        <div class="mono" style="display:flex; gap:8px; flex-wrap:wrap;">
+            @foreach (int t in _tokens)
+            {
+                <span class="panel" style="padding:6px 10px; margin:0;">
+                    @vocab.WordAt(t) <span class="dim">· @t</span>
+                </span>
+            }
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>② Embed + positional (@(_emb[0].Length)-dim)</h3>
+        <p class="dim">Token embedding (learned) plus a fixed sin/cos position signal. First @show dims shown.</p>
+        <table class="mono vtable">
+            <thead><tr><th>pos</th><th>embed</th><th>+ pos</th><th>= total</th></tr></thead>
+            <tbody>
+            @for (int p = 0; p < _tokens.Length; p++)
+            {
+                var tokEmb = model.Embedding.TokenWeights[_tokens[p]];
+                var posEnc = model.Embedding.GetPosEncoding(p);
+                <tr>
+                    <td>@p (@vocab.WordAt(_tokens[p]))</td>
+                    <td>@Row(tokEmb, show)</td>
+                    <td>@Row(posEnc, show)</td>
+                    <td class="green">@Row(_emb[p], show)</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>③ Attention (single head)</h3>
+        <p class="dim">How much each row position attends to each column position (post-softmax).</p>
+        <table class="mono vtable heat">
+            <thead>
+                <tr><th></th>@foreach (int t in _tokens) { <th>@vocab.WordAt(t)</th> }</tr>
+            </thead>
+            <tbody>
+            @for (int r = 0; r < _tokens.Length; r++)
+            {
+                <tr>
+                    <th>@vocab.WordAt(_tokens[r])</th>
+                    @for (int c = 0; c < _tokens.Length; c++)
+                    {
+                        float w = _attn![r][c];
+                        <td style="background: @Heat(w)">@w.ToString("F2")</td>
+                    }
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h3>④ Feed-forward (@(_hRelu![0].Length) hidden neurons, ReLU)</h3>
+        <p class="dim">Each position passes through x → W1 → ReLU → W2. Lit cells = active neurons.</p>
+        @for (int p = 0; p < _tokens.Length; p++)
+        {
+            int dFF = _hRelu[p].Length;
+            int active = _hRelu[p].Count(v => v > 0f);
+            <div style="margin:8px 0;">
+                <span class="mono">@($"pos {p} ({vocab.WordAt(_tokens[p])})")</span>
+                <span class="neurons">
+                    @for (int j = 0; j < dFF; j++)
+                    {
+                        <span class="cell @(_hRelu[p][j] > 0f ? "on" : "off")"></span>
+                    }
+                </span>
+                <span class="dim mono"> @active/@dFF active</span>
+            </div>
+        }
+    </div>
+
+    <div class="panel">
+        <h3>⑤ Output logits (predictions)</h3>
+        <p class="dim">Output vectors projected to vocabulary size; the top logit per position wins.</p>
+        @for (int p = 1; p < _tokens.Length - 1; p++)
+        {
+            <div style="margin:10px 0;">
+                <div class="mono">pos @p (@vocab.WordAt(_tokens[p])) — top tokens:</div>
+                @foreach (var (idx, val, isTop) in Top(_logits![p], 3))
+                {
+                    <div class="logit-row mono">
+                        <span class="logit-word">@vocab.WordAt(idx)</span>
+                        <span class="logit-bar"><span class="logit-fill @(isTop ? "win" : "")"
+                              style="width: @BarPct(_logits[p], val)%"></span></span>
+                        <span class="logit-val">@val.ToString("F2")</span>
+                        @if (isTop) { <span class="green"> ✓</span> }
+                    </div>
+                }
+            </div>
+        }
+        <hr style="border-color:var(--grid)" />
+        <p class="mono"><span class="dim">Yoda:</span> <span class="green">@_result</span></p>
+    </div>
+}
+
+@code {
+    private string _input = "";
+    private string? _error;
+    private string? _result;
+    private int[]? _tokens;
+    private float[][]? _emb;
+    private float[][]? _attn;
+    private float[][]? _hRelu;
+    private float[][]? _logits;
+
+    private void OnKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") Run(); }
+
+    private void Run()
+    {
+        _error = null; _tokens = null;
+        try { _tokens = Yoda.Vocab.Encode(_input.Trim()); }
+        catch (ArgumentException ex) { _error = $"(unknown word — {ex.Message})"; return; }
+
+        var model = Yoda.Model;
+        _logits = model.Forward(_tokens);
+        _emb    = model.Embedding.LastOutput;
+        _attn   = model.Block.Attention.Weights;
+        _hRelu  = model.Block.Ffn.HRelu;
+
+        int[] predicted = _logits.Select(row =>
+        {
+            int best = 0;
+            for (int i = 1; i < row.Length; i++) if (row[i] > row[best]) best = i;
+            return best;
+        }).ToArray();
+        _result = Yoda.Vocab.Decode(predicted);
+    }
+
+    private static string Row(float[] v, int n) =>
+        "[ " + string.Join(" ", v.Take(n).Select(x => x.ToString("F3").PadLeft(7))) + " … ]";
+
+    // Map an attention weight in [0,1] to a green-tinted background.
+    private static string Heat(float w)
+    {
+        int a = (int)Math.Clamp(w * 100, 0, 100);
+        return $"rgba(74,222,128,{(a / 100.0):F2})";
+    }
+
+    private static IEnumerable<(int idx, float val, bool isTop)> Top(float[] logits, int n)
+    {
+        var ranked = Enumerable.Range(0, logits.Length)
+            .OrderByDescending(i => logits[i]).Take(n).ToArray();
+        for (int k = 0; k < ranked.Length; k++)
+            yield return (ranked[k], logits[ranked[k]], k == 0);
+    }
+
+    // Bar width as a percentage relative to the min/max of the top-3 shown.
+    private static int BarPct(float[] logits, float val)
+    {
+        var ranked = Enumerable.Range(0, logits.Length)
+            .OrderByDescending(i => logits[i]).Take(3).ToArray();
+        float max = logits[ranked[0]], min = logits[ranked[^1]];
+        float span = max - min;
+        if (span < 1e-6f) return val >= max ? 100 : 0;
+        return (int)Math.Clamp((val - min) / span * 100, 0, 100);
+    }
+}
