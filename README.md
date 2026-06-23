@@ -9,7 +9,7 @@ Master Yoda might have said, for example:
 
 A Blazor WebAssembly build runs entirely client-side and is hosted on GitHub Pages:
 
-**https://philip-loventoft.github.io/uYodaBot/**  ← (set to your Pages URL)
+**https://philipkaare.github.io/uYodaBot/**
 
 It has full parity with the console app: **Chat**, **Verbose** (a visual trace of
 every transformer stage), and **Train** (retrain the model in your browser; the
