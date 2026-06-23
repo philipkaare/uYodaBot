@@ -1,16 +1,14 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
+
+<div class="yoda-app">
+    <header class="yoda-header">
+        <span class="yoda-logo">uYodaBot</span>
         <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
+    </header>
+    <main class="yoda-main">
+        @Body
     </main>
+    <footer class="yoda-footer">
+        The simplest transformer imaginable — running in your browser.
+    </footer>
 </div>

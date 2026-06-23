@@ -1,0 +1,30 @@
+:root {
+  --bg: #0f1115; --panel: #171a21; --ink: #e6e6e6; --dim: #8b93a1;
+  --green: #4ade80; --yellow: #fbbf24; --red: #f87171; --accent: #38bdf8;
+  --grid: #232838;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font-family: ui-sans-serif, system-ui, sans-serif; }
+.yoda-app { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+.yoda-header { display: flex; align-items: center; gap: 24px;
+  padding: 16px 0; border-bottom: 1px solid var(--grid); }
+.yoda-logo { font-weight: 700; letter-spacing: 1px; color: var(--green); }
+.yoda-nav { display: flex; gap: 8px; }
+.yoda-tab { color: var(--dim); text-decoration: none; padding: 6px 14px;
+  border-radius: 8px; }
+.yoda-tab.active { color: var(--ink); background: var(--panel); }
+.yoda-main { padding: 24px 0; min-height: 60vh; }
+.yoda-footer { color: var(--dim); font-size: 12px; padding: 16px 0;
+  border-top: 1px solid var(--grid); }
+.panel { background: var(--panel); border: 1px solid var(--grid);
+  border-radius: 12px; padding: 16px; margin: 12px 0; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.dim { color: var(--dim); } .green { color: var(--green); }
+.yellow { color: var(--yellow); } .red { color: var(--red); }
+input[type=text] { width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--grid); background: #0c0e12; color: var(--ink); font-size: 16px; }
+button { cursor: pointer; border: 1px solid var(--grid); background: var(--panel);
+  color: var(--ink); padding: 8px 16px; border-radius: 8px; font-size: 14px; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
