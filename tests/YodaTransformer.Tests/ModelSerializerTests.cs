@@ -40,3 +40,25 @@ public class ModelSerializerTests
         Assert.False(ok);
     }
 }
+
+public class ForwardCacheTests
+{
+    [Fact]
+    public void Forward_PopulatesCaches_UsedByVerboseView()
+    {
+        var vocab = new Vocabulary();
+        var pairs = TrainingData.GetPairs(vocab);
+        int maxSeqLen = pairs.Max(p => Math.Max(p.input.Length, p.target.Length));
+        var model = new TransformerModel(vocab.Size, 8, 8, 16, maxSeqLen, new Random(42));
+
+        int[] tokens = vocab.Encode("i am hungry");
+        float[][] logits = model.Forward(tokens);
+
+        Assert.Equal(tokens.Length, logits.Length);
+        Assert.Equal(vocab.Size, logits[0].Length);
+        Assert.Equal(tokens.Length, model.Embedding.LastOutput.Length);
+        Assert.Equal(tokens.Length, model.Block.Attention.Weights.Length);
+        Assert.Equal(tokens.Length, model.Block.FfnOut.Length);
+        Assert.Equal(16, model.Block.Ffn.HRelu[0].Length);
+    }
+}
