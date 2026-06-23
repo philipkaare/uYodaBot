@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Builds and runs uYodaBot.
-set -euo pipefail
-
-cd "$(dirname "$0")"
-
-dotnet build YodaTransformer.csproj -c Release
-dotnet run --project YodaTransformer.csproj -c Release --no-build "$@"
+set -e
+# Run the console app, or pass "web" to run the Blazor dev server.
+if [ "$1" = "web" ]; then
+  dotnet run --project src/YodaTransformer.Web
+else
+  dotnet run --project src/YodaTransformer.Console
+fi

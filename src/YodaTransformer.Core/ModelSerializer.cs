@@ -7,7 +7,13 @@ public static class ModelSerializer
 
     public static void Save(TransformerModel model, int epochs, string path)
     {
-        using var w = new BinaryWriter(File.Open(path, FileMode.Create));
+        using var stream = File.Open(path, FileMode.Create);
+        Save(model, epochs, stream);
+    }
+
+    public static void Save(TransformerModel model, int epochs, Stream stream)
+    {
+        using var w = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
         w.Write(Magic);
         w.Write(Version);
         w.Write(epochs);
@@ -32,7 +38,18 @@ public static class ModelSerializer
         if (!File.Exists(path)) return false;
         try
         {
-            using var r = new BinaryReader(File.OpenRead(path));
+            using var stream = File.OpenRead(path);
+            return TryLoad(model, out epochs, stream);
+        }
+        catch { return false; }
+    }
+
+    public static bool TryLoad(TransformerModel model, out int epochs, Stream stream)
+    {
+        epochs = 0;
+        try
+        {
+            using var r = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
             if (!r.ReadBytes(4).SequenceEqual(Magic)) return false;
             if (r.ReadByte() != Version) return false;
             epochs = r.ReadInt32();
@@ -51,11 +68,6 @@ public static class ModelSerializer
             ReadIntoVec   (r, model.Block.Ffn.b2);
 
             return true;
-        }
-        catch (Exception ex) when (ex is not FileNotFoundException)
-        {
-            Console.Error.WriteLine($"[ModelSerializer] Could not load {path}: {ex.Message}");
-            return false;
         }
         catch { return false; }
     }

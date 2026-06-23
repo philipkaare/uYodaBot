@@ -1,0 +1,124 @@
+@page "/train"
+@inject YodaModel Yoda
+@implements IDisposable
+<PageTitle>uYodaBot — Train</PageTitle>
+
+<h2>Train</h2>
+<div class="panel">
+    <p class="dim">
+        Trains a fresh model from scratch (seed 42) for @YodaModel.Epochs epochs on
+        @Yoda.Pairs.Length sentence pairs. Runs entirely in your browser; the result is
+        saved locally and used by Chat and Verbose.
+    </p>
+    <div style="display:flex; gap:8px;">
+        <button @onclick="Start"  disabled="@_running">Train / Retrain</button>
+        <button @onclick="Stop"   disabled="@(!_running)">Stop</button>
+    </div>
+</div>
+
+@if (_epoch > 0 || _running)
+{
+    <div class="panel">
+        <div class="mono">
+            Epoch @_epoch / @YodaModel.Epochs
+            <span class="dim">(@(((double)_epoch / YodaModel.Epochs * 100).ToString("F0"))%)</span>
+        </div>
+        <div class="logit-bar" style="height:14px; margin:8px 0;">
+            <span class="logit-fill win"
+                  style="width:@(((double)_epoch / YodaModel.Epochs) * 100)%"></span>
+        </div>
+        <div class="mono">
+            loss <span class="@LossClass(_loss)">@_loss.ToString("F4")</span>
+            @if (_done) { <span class="green"> ✓ done</span> }
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="dim">Loss curve (recent checkpoints)</div>
+        @foreach (float l in _history)
+        {
+            <div class="logit-row mono">
+                <span class="logit-val">@l.ToString("F4")</span>
+                <span class="logit-bar"><span class="logit-fill"
+                      style="width:@LossPct(l)%; background:@LossColor(l)"></span></span>
+            </div>
+        }
+    </div>
+
+    <div class="panel">
+        <div class="dim">Per-pair losses</div>
+        @if (_perPair is not null)
+        {
+            @for (int i = 0; i < Yoda.Pairs.Length; i++)
+            {
+                float v = _perPair[i];
+                <div class="logit-row mono">
+                    <span class="logit-word" style="width:220px;">
+                        "@Yoda.Vocab.Decode(Yoda.Pairs[i].input)"
+                    </span>
+                    <span class="logit-bar"><span class="logit-fill"
+                          style="width:@PairPct(v)%; background:@(v > _perPairAvg ? "var(--yellow)" : "var(--grid)")"></span></span>
+                    <span class="logit-val">@v.ToString("F4")</span>
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    private bool _running;
+    private bool _done;
+    private int _epoch;
+    private float _loss;
+    private float _initLoss = 1f;
+    private float[]? _perPair;
+    private float _perPairAvg;
+    private float _perPairMax = 1e-6f;
+    private readonly List<float> _history = new();
+    private CancellationTokenSource? _cts;
+    private const int ReportEvery = 200;
+
+    private async Task Start()
+    {
+        _running = true; _done = false; _epoch = 0; _history.Clear();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        var model = Yoda.NewModel();
+        var trainer = new Trainer(model, YodaModel.LearningRate);
+
+        for (int e = 0; e < YodaModel.Epochs && !token.IsCancellationRequested; e++)
+        {
+            var (avgLoss, perPair) = trainer.TrainStep(Yoda.Pairs);
+            _epoch = e + 1; _loss = avgLoss;
+            if (e == 0) _initLoss = avgLoss <= 0 ? 1f : avgLoss;
+
+            if (e % ReportEvery == 0 || e == YodaModel.Epochs - 1)
+            {
+                _perPair = perPair;
+                _perPairAvg = perPair.Average();
+                _perPairMax = Math.Max(perPair.Max(), 1e-6f);
+                _history.Add(avgLoss);
+                if (_history.Count > 12) _history.RemoveAt(0);
+                StateHasChanged();
+                await Task.Delay(1, CancellationToken.None); // yield so the UI repaints
+            }
+        }
+
+        Yoda.ReplaceModel(model, _epoch);
+        await Yoda.SaveToLocalStorageAsync();
+        _running = false; _done = true;
+        StateHasChanged();
+    }
+
+    private void Stop() => _cts?.Cancel();
+
+    private int   LossPct(float l)   => (int)Math.Clamp(l / _initLoss * 100, 0, 100);
+    private int   PairPct(float v)   => (int)Math.Clamp(v / _perPairMax * 100, 0, 100);
+    private string LossClass(float l) =>
+        l > _initLoss * 0.5f ? "red" : l > _initLoss * 0.1f ? "yellow" : "green";
+    private string LossColor(float l) =>
+        l > _initLoss * 0.5f ? "var(--red)" : l > _initLoss * 0.1f ? "var(--yellow)" : "var(--green)";
+
+    public void Dispose() => _cts?.Cancel();
+}

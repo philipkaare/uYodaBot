@@ -1,0 +1,63 @@
+@page "/"
+@inject YodaModel Yoda
+<PageTitle>uYodaBot — Chat</PageTitle>
+
+<h2>Chat</h2>
+
+@if (!Yoda.IsTrained)
+{
+    <div class="panel yellow">
+        No trained model is loaded. Visit <a href="train">Train</a> to create one.
+    </div>
+}
+
+<div class="panel">
+    <input type="text" placeholder="Type a sentence, e.g. i am strong"
+           @bind="_input" @bind:event="oninput" @onkeydown="OnKeyDown" />
+    <div style="margin-top:12px;">
+        <button @onclick="Speak" disabled="@string.IsNullOrWhiteSpace(_input)">Yoda-fy</button>
+    </div>
+
+    @if (_output is not null)
+    {
+        <p class="mono" style="margin-top:16px;">
+            <span class="dim">Yoda:</span> <span class="green">@_output</span>
+        </p>
+    }
+    @if (_error is not null)
+    {
+        <p class="mono red" style="margin-top:16px;">@_error</p>
+    }
+</div>
+
+<div class="panel">
+    <div class="dim">Known words</div>
+    <p class="mono">@string.Join(", ", Yoda.Vocab.Words)</p>
+</div>
+
+@code {
+    private string _input = "";
+    private string? _output;
+    private string? _error;
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") Speak();
+    }
+
+    private void Speak()
+    {
+        _output = null;
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_input)) return;
+        try
+        {
+            int[] predicted = Yoda.Predict(_input);
+            _output = Yoda.Decode(predicted);
+        }
+        catch (ArgumentException ex)
+        {
+            _error = $"(unknown word — {ex.Message})";
+        }
+    }
+}
